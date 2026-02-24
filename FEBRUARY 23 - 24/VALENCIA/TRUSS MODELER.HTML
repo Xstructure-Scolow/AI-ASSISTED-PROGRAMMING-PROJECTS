@@ -87,6 +87,8 @@ function animate() {
     renderer.render(scene, camera);
 }
 
+
+
 function generateTruss() {
 
     if (trussGroup) scene.remove(trussGroup);
@@ -145,6 +147,7 @@ function generateTruss() {
     }
 
     scene.add(trussGroup);
+
 }
 
 window.addEventListener("resize", () => {
