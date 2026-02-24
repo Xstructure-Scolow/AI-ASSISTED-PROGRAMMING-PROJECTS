@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TRUSS MODELER — 3D Structural Analysis</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&family=Rajdhani:wght@300;400;600;700&display=swap');
+
+  :root {
+    --bg: #080c10;
+    --panel: #0d1520;
+    --panel2: #111c2a;
+    --border: #1e3048;
+    --accent: #00e5ff;
+    --accent2: #ff6b35;
+    --accent3: #39ff14;
+    --text: #c8d8e8;
+    --text-dim: #4a6380;
+    --grid: #0a1825;
+    --glow: 0 0 20px rgba(0,229,255,0.3);
+    --glow2: 0 0 20px rgba(57,255,20,0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Rajdhani', sans-serif;
+    height: 100vh;
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    grid-template-rows: 60px 1fr 180px;
+    overflow: hidden;
+  }
+
+  /* HEADER */
+  header {
+    grid-column: 1 / -1;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), var(--accent2), var(--accent3), transparent);
+    animation: scanline 3s linear infinite;
+  }
+  @keyframes scanline {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 4px;
+    color: var(--accent);
+    text-shadow: var(--glow);
+  }
+  .logo span { color: var(--accent2); }
+  .subtitle {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    margin-left: 4px;
+  }
+  .header-stats {
+    margin-left: auto;
+    display: flex;
+    gap: 24px;
+  }
+  .stat {
+    text-align: center;
+  }
+  .stat-val {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 18px;
+    color: var(--accent3);
+    text-shadow: var(--glow2);
+  }
+  .stat-label {
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* LEFT PANEL */
+  .panel {
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .panel::-webkit-scrollbar { width: 4px; }
+  .panel::-webkit-scrollbar-track { background: var(--bg); }
+  .panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .section-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-transform: uppercase;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 4px;
+  }
+
+  .input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .input-group label {
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .input-group label span {
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--accent2);
+    font-size: 12px;
+  }
+  input[type=range] {
+    width: 100%;
+    height: 4px;
+    -webkit-appearance: none;
+    background: var(--border);
+    border-radius: 2px;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    cursor: pointer;
+    transition: transform 0.1s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.3); }
+  input[type=range]::-webkit-slider-runnable-track {
+    background: linear-gradient(90deg, var(--accent) var(--pct, 0%), var(--border) var(--pct, 0%));
+    border-radius: 2px;
+    height: 4px;
+  }
+
+  select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 10px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 13px;
+    border-radius: 3px;
+    cursor: pointer;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  select:focus { border-color: var(--accent); }
+
+  .btn {
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 2px;
+    padding: 8px 16px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    border-radius: 2px;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%; right: 0; bottom: 0;
+    background: rgba(0,229,255,0.1);
+    transition: left 0.2s;
+  }
+  .btn:hover::before { left: 0; }
+  .btn:hover { box-shadow: var(--glow); }
+  .btn-danger { border-color: var(--accent2); color: var(--accent2); }
+  .btn-danger::before { background: rgba(255,107,53,0.1); }
+  .btn-danger:hover { box-shadow: 0 0 20px rgba(255,107,53,0.3); }
+  .btn-success { border-color: var(--accent3); color: var(--accent3); }
+  .btn-success::before { background: rgba(57,255,20,0.1); }
+  .btn-success:hover { box-shadow: var(--glow2); }
+
+  .btn-row { display: flex; gap: 8px; }
+  .btn-row .btn { flex: 1; }
+
+  .toggle-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text-dim);
+    transition: color 0.2s;
+  }
+  .toggle:hover { color: var(--text); }
+  .toggle input[type=checkbox] { display: none; }
+  .toggle-box {
+    width: 28px;
+    height: 16px;
+    background: var(--border);
+    border-radius: 8px;
+    position: relative;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+  .toggle-box::after {
+    content: '';
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    transition: transform 0.2s, background 0.2s;
+  }
+  .toggle input:checked + .toggle-box { background: rgba(0,229,255,0.3); }
+  .toggle input:checked + .toggle-box::after { transform: translateX(12px); background: var(--accent); }
+
+  /* CANVAS */
+  #canvas-container {
+    position: relative;
+    overflow: hidden;
+    background: var(--bg);
+  }
+  #canvas-container canvas { display: block; }
+
+  .canvas-overlay {
+    position: absolute;
+    top: 12px; right: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .canvas-btn {
+    width: 36px; height: 36px;
+    background: rgba(13,21,32,0.85);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s;
+    backdrop-filter: blur(4px);
+  }
+  .canvas-btn:hover { border-color: var(--accent); color: var(--accent); box-shadow: var(--glow); }
+
+  .canvas-info {
+    position: absolute;
+    bottom: 12px; left: 12px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    line-height: 1.8;
+  }
+
+  /* BOTTOM PANEL */
+  .results-panel {
+    grid-column: 1 / -1;
+    background: var(--panel);
+    border-top: 1px solid var(--border);
+    padding: 12px 20px;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  .results-grid {
+    display: flex;
+    gap: 20px;
+    height: 100%;
+    align-items: flex-start;
+  }
+  .results-section {
+    flex-shrink: 0;
+  }
+  .results-title {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .member-table {
+    border-collapse: collapse;
+    font-size: 12px;
+    font-family: 'Share Tech Mono', monospace;
+    min-width: 300px;
+  }
+  .member-table th {
+    color: var(--text-dim);
+    font-size: 10px;
+    text-align: left;
+    padding: 3px 10px;
+    border-bottom: 1px solid var(--border);
+    letter-spacing: 1px;
+  }
+  .member-table td {
+    padding: 3px 10px;
+    color: var(--text);
+    border-bottom: 1px solid rgba(30,48,72,0.5);
+  }
+  .td-tension { color: var(--accent3); }
+  .td-compression { color: var(--accent2); }
+  .td-zero { color: var(--text-dim); }
+
+  .force-diagram {
+    flex: 1;
+    min-width: 200px;
+    height: 130px;
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+  }
+  .force-bar-wrap { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1; }
+  .force-bar {
+    width: 100%;
+    border-radius: 2px 2px 0 0;
+    transition: height 0.5s ease;
+    min-height: 2px;
+  }
+  .force-bar-label { font-family: 'Share Tech Mono', monospace; font-size: 9px; color: var(--text-dim); }
+
+  .analysis-card {
+    background: var(--panel2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 14px;
+    min-width: 140px;
+  }
+  .analysis-card-title { font-size: 10px; color: var(--text-dim); letter-spacing: 1px; margin-bottom: 6px; }
+  .analysis-card-val { font-family: 'Share Tech Mono', monospace; font-size: 20px; }
+  .analysis-card-val.good { color: var(--accent3); text-shadow: var(--glow2); }
+  .analysis-card-val.warn { color: var(--accent); }
+  .analysis-card-val.bad { color: var(--accent2); }
+  .analysis-card-unit { font-size: 11px; color: var(--text-dim); margin-left: 4px; }
+
+  .divider {
+    width: 1px;
+    background: var(--border);
+    align-self: stretch;
+    flex-shrink: 0;
+    margin: 0 4px;
+  }
+
+  /* Scrollbar */
+  .results-panel::-webkit-scrollbar { height: 4px; }
+  .results-panel::-webkit-scrollbar-track { background: var(--bg); }
+  .results-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="logo">TRUSS<span>MOD</span></div>
+    <div class="subtitle">3D PARAMETRIC STRUCTURAL MODELER v2.1</div>
+  </div>
+  <div class="header-stats">
+    <div class="stat"><div class="stat-val" id="stat-nodes">0</div><div class="stat-label">Nodes</div></div>
+    <div class="stat"><div class="stat-val" id="stat-members">0</div><div class="stat-label">Members</div></div>
+    <div class="stat"><div class="stat-val" id="stat-dof">0</div><div class="stat-label">DOF</div></div>
+    <div class="stat"><div class="stat-val" id="stat-det" style="color:var(--accent)">—</div><div class="stat-label">Determinacy</div></div>
+  </div>
+</header>
+
+<!-- LEFT PANEL -->
+<div class="panel">
+  <div class="section-title">⬡ Truss Type</div>
+  <div class="input-group">
+    <select id="truss-type">
+      <option value="pratt">Pratt Truss</option>
+      <option value="howe">Howe Truss</option>
+      <option value="warren">Warren Truss</option>
+      <option value="k-truss">K-Truss</option>
+      <option value="space">Space Truss (3D)</option>
+      <option value="dome">Geodesic Dome</option>
+    </select>
+  </div>
+
+  <div class="section-title">⬡ Geometry</div>
+  <div class="input-group">
+    <label>Span Length <span id="val-span">12</span> m</label>
+    <input type="range" id="span" min="4" max="30" step="1" value="12">
+  </div>
+  <div class="input-group">
+    <label>Truss Height <span id="val-height">2.5</span> m</label>
+    <input type="range" id="height" min="0.5" max="8" step="0.25" value="2.5">
+  </div>
+  <div class="input-group">
+    <label>Bay Count <span id="val-bays">6</span></label>
+    <input type="range" id="bays" min="2" max="16" step="1" value="6">
+  </div>
+  <div class="input-group" id="depth-group">
+    <label>Width (3D) <span id="val-depth">4</span> m</label>
+    <input type="range" id="depth" min="1" max="12" step="0.5" value="4">
+  </div>
+
+  <div class="section-title">⬡ Section</div>
+  <div class="input-group">
+    <label>Material</label>
+    <select id="material">
+      <option value="steel">Steel (E=200 GPa)</option>
+      <option value="alum">Aluminium (E=70 GPa)</option>
+      <option value="timber">Timber (E=12 GPa)</option>
+      <option value="carbon">Carbon Fibre (E=70 GPa)</option>
+    </select>
+  </div>
+  <div class="input-group">
+    <label>Section Area <span id="val-area">1200</span> mm²</label>
+    <input type="range" id="area" min="100" max="10000" step="100" value="1200">
+  </div>
+
+  <div class="section-title">⬡ Loading</div>
+  <div class="input-group">
+    <label>Point Load <span id="val-load">50</span> kN</label>
+    <input type="range" id="load" min="1" max="500" step="1" value="50">
+  </div>
+  <div class="input-group">
+    <label>Load Position <span id="val-loadpos">50</span>%</label>
+    <input type="range" id="loadpos" min="0" max="100" step="10" value="50">
+  </div>
+  <div class="input-group">
+    <label>UDL <span id="val-udl">0</span> kN/m</label>
+    <input type="range" id="udl" min="0" max="50" step="1" value="0">
+  </div>
+
+  <div class="section-title">⬡ Display</div>
+  <div class="toggle-group">
+    <label class="toggle"><input type="checkbox" id="tog-forces" checked><div class="toggle-box"></div>Forces</label>
+    <label class="toggle"><input type="checkbox" id="tog-nodes" checked><div class="toggle-box"></div>Nodes</label>
+    <label class="toggle"><input type="checkbox" id="tog-labels" checked><div class="toggle-box"></div>Labels</label>
+    <label class="toggle"><input type="checkbox" id="tog-deform"><div class="toggle-box"></div>Deformed</label>
+    <label class="toggle"><input type="checkbox" id="tog-grid" checked><div class="toggle-box"></div>Grid</label>
+    <label class="toggle"><input type="checkbox" id="tog-shadow" checked><div class="toggle-box"></div>Shadows</label>
+  </div>
+
+  <div class="btn-row" style="margin-top:4px">
+    <button class="btn btn-success" onclick="buildTruss()">◆ BUILD</button>
+    <button class="btn btn-danger" onclick="resetView()">↺ RESET</button>
+  </div>
+  <button class="btn" style="width:100%" onclick="exportData()">⬇ EXPORT CSV</button>
+</div>
+
+<!-- 3D CANVAS -->
+<div id="canvas-container">
+  <div class="canvas-overlay">
+    <button class="canvas-btn" onclick="zoomIn()" title="Zoom In">+</button>
+    <button class="canvas-btn" onclick="zoomOut()" title="Zoom Out">−</button>
+    <button class="canvas-btn" onclick="resetView()" title="Reset View">⌂</button>
+    <button class="canvas-btn" onclick="toggleProj()" title="Projection" id="proj-btn">⊡</button>
+  </div>
+  <div class="canvas-info">
+    DRAG: Rotate &nbsp;|&nbsp; SCROLL: Zoom &nbsp;|&nbsp; SHIFT+DRAG: Pan<br>
+    <span id="cam-info">Camera: Perspective</span>
+  </div>
+</div>
+
+<!-- RESULTS PANEL -->
+<div class="results-panel">
+  <div class="results-grid">
+    <div class="results-section">
+      <div class="results-title">// MEMBER FORCES</div>
+      <table class="member-table">
+        <thead><tr><th>#</th><th>Member</th><th>Force</th><th>Type</th><th>Stress</th></tr></thead>
+        <tbody id="member-tbody"></tbody>
+      </table>
+    </div>
+    <div class="divider"></div>
+    <div class="results-section">
+      <div class="results-title">// FORCE DIAGRAM</div>
+      <div class="force-diagram" id="force-diagram"></div>
+    </div>
+    <div class="divider"></div>
+    <div class="results-section" style="display:flex;gap:10px;flex-wrap:wrap;align-content:flex-start">
+      <div class="results-title" style="width:100%">// ANALYSIS</div>
+      <div class="analysis-card">
+        <div class="analysis-card-title">MAX TENSION</div>
+        <div class="analysis-card-val good" id="max-tension">—<span class="analysis-card-unit">kN</span></div>
+      </div>
+      <div class="analysis-card">
+        <div class="analysis-card-title">MAX COMPRESSION</div>
+        <div class="analysis-card-val bad" id="max-comp">—<span class="analysis-card-unit">kN</span></div>
+      </div>
+      <div class="analysis-card">
+        <div class="analysis-card-title">MAX DEFLECTION</div>
+        <div class="analysis-card-val warn" id="max-defl">—<span class="analysis-card-unit">mm</span></div>
+      </div>
+      <div class="analysis-card">
+        <div class="analysis-card-title">TOTAL WEIGHT</div>
+        <div class="analysis-card-val warn" id="total-weight">—<span class="analysis-card-unit">kg</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== THREE.JS SETUP ==========
+const container = document.getElementById('canvas-container');
+const W = () => container.clientWidth;
+const H = () => container.clientHeight;
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+container.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x080c10);
+scene.fog = new THREE.FogExp2(0x080c10, 0.012);
+
+let isPerspective = true;
+const camera = new THREE.PerspectiveCamera(45, W()/H(), 0.1, 1000);
+const orthoCamera = new THREE.OrthographicCamera(-20,20,20,-20,0.1,1000);
+
+// Lighting
+const ambient = new THREE.AmbientLight(0x1a2a40, 0.8);
+scene.add(ambient);
+const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+dirLight.position.set(20, 30, 20);
+dirLight.castShadow = true;
+scene.add(dirLight);
+const pointLight = new THREE.PointLight(0x00e5ff, 1.5, 40);
+pointLight.position.set(0, 10, 0);
+scene.add(pointLight);
+
+// Grid
+let gridHelper = null;
+function updateGrid() {
+  if (gridHelper) scene.remove(gridHelper);
+  if (!document.getElementById('tog-grid').checked) return;
+  gridHelper = new THREE.GridHelper(60, 60, 0x0a1825, 0x0a1825);
+  gridHelper.position.y = -0.1;
+  scene.add(gridHelper);
+}
+
+// Orbit controls (manual)
+let isDragging = false, isShift = false;
+let lastMouse = {x:0, y:0};
+let spherical = {theta: -Math.PI/4, phi: Math.PI/4, radius: 20};
+let panOffset = new THREE.Vector3();
+
+function updateCamera() {
+  const x = spherical.radius * Math.sin(spherical.phi) * Math.sin(spherical.theta);
+  const y = spherical.radius * Math.cos(spherical.phi);
+  const z = spherical.radius * Math.sin(spherical.phi) * Math.cos(spherical.theta);
+  camera.position.set(x + panOffset.x, y + panOffset.y, z + panOffset.z);
+  camera.lookAt(panOffset.x, panOffset.y, panOffset.z);
+  orthoCamera.position.copy(camera.position);
+  orthoCamera.lookAt(panOffset.x, panOffset.y, panOffset.z);
+}
+
+renderer.domElement.addEventListener('mousedown', e => { isDragging=true; isShift=e.shiftKey; lastMouse={x:e.clientX,y:e.clientY}; });
+renderer.domElement.addEventListener('mouseup', () => isDragging=false);
+renderer.domElement.addEventListener('mousemove', e => {
+  if (!isDragging) return;
+  const dx = e.clientX - lastMouse.x;
+  const dy = e.clientY - lastMouse.y;
+  if (isShift) {
+    panOffset.x -= dx * 0.02;
+    panOffset.y += dy * 0.02;
+  } else {
+    spherical.theta -= dx * 0.005;
+    spherical.phi = Math.max(0.05, Math.min(Math.PI-0.05, spherical.phi + dy * 0.005));
+  }
+  lastMouse = {x:e.clientX,y:e.clientY};
+  updateCamera();
+});
+renderer.domElement.addEventListener('wheel', e => {
+  spherical.radius = Math.max(3, Math.min(80, spherical.radius + e.deltaY * 0.05));
+  updateCamera();
+});
+renderer.domElement.addEventListener('touchstart', e => { if(e.touches.length===1){ isDragging=true; lastMouse={x:e.touches[0].clientX,y:e.touches[0].clientY}; }});
+renderer.domElement.addEventListener('touchend', () => isDragging=false);
+renderer.domElement.addEventListener('touchmove', e => {
+  if (!isDragging || e.touches.length!==1) return;
+  const dx = e.touches[0].clientX - lastMouse.x;
+  const dy = e.touches[0].clientY - lastMouse.y;
+  spherical.theta -= dx * 0.005;
+  spherical.phi = Math.max(0.05, Math.min(Math.PI-0.05, spherical.phi + dy * 0.005));
+  lastMouse = {x:e.touches[0].clientX, y:e.touches[0].clientY};
+  updateCamera();
+});
+
+function zoomIn() { spherical.radius = Math.max(3, spherical.radius*0.8); updateCamera(); }
+function zoomOut() { spherical.radius = Math.min(80, spherical.radius*1.25); updateCamera(); }
+function toggleProj() {
+  isPerspective = !isPerspective;
+  document.getElementById('proj-btn').textContent = isPerspective ? '⊡' : '⊞';
+  document.getElementById('cam-info').textContent = 'Camera: ' + (isPerspective ? 'Perspective' : 'Orthographic');
+}
+
+// ========== TRUSS DATA ==========
+let trussNodes = [];
+let trussMembers = [];
+let memberForces = [];
+let trussGroup = null;
+let labelSprites = [];
+
+const MATERIALS = {
+  steel: { E: 200e9, density: 7850, fy: 250 },
+  alum: { E: 70e9, density: 2700, fy: 270 },
+  timber: { E: 12e9, density: 600, fy: 30 },
+  carbon: { E: 70e9, density: 1600, fy: 600 }
+};
+
+// ========== TRUSS GENERATORS ==========
+function generatePratt(span, h, bays) {
+  const nodes = [], members = [];
+  const dx = span / bays;
+  for (let i = 0; i <= bays; i++) {
+    nodes.push({x: i*dx, y: 0, z: 0, support: i===0 ? 'pin' : i===bays ? 'roller' : null});
+    nodes.push({x: i*dx, y: h, z: 0, support: null});
+  }
+  // Top & bottom chords
+  for (let i = 0; i < bays; i++) {
+    members.push([i*2, (i+1)*2]);     // bottom
+    members.push([i*2+1, (i+1)*2+1]);  // top
+  }
+  // Verticals
+  for (let i = 0; i <= bays; i++) {
+    members.push([i*2, i*2+1]);
+  }
+  // Diagonals (Pratt: inclined toward center from support)
+  const mid = Math.floor(bays/2);
+  for (let i = 0; i < bays; i++) {
+    if (i < mid) members.push([i*2+1, (i+1)*2]);
+    else members.push([i*2, (i+1)*2+1]);
+  }
+  return {nodes, members};
+}
+
+function generateHowe(span, h, bays) {
+  const nodes = [], members = [];
+  const dx = span / bays;
+  for (let i = 0; i <= bays; i++) {
+    nodes.push({x: i*dx, y: 0, z: 0, support: i===0 ? 'pin' : i===bays ? 'roller' : null});
+    nodes.push({x: i*dx, y: h, z: 0, support: null});
+  }
+  for (let i = 0; i < bays; i++) {
+    members.push([i*2, (i+1)*2]);
+    members.push([i*2+1, (i+1)*2+1]);
+  }
+  for (let i = 0; i <= bays; i++) {
+    members.push([i*2, i*2+1]);
+  }
+  // Howe: diagonals opposite direction
+  const mid = Math.floor(bays/2);
+  for (let i = 0; i < bays; i++) {
+    if (i < mid) members.push([i*2, (i+1)*2+1]);
+    else members.push([i*2+1, (i+1)*2]);
+  }
+  return {nodes, members};
+}
+
+function generateWarren(span, h, bays) {
+  if (bays % 2 !== 0) bays++;
+  const nodes = [], members = [];
+  const dx = span / bays;
+  for (let i = 0; i <= bays; i++) {
+    nodes.push({x: i*dx, y: 0, z: 0, support: i===0 ? 'pin' : i===bays ? 'roller' : null});
+  }
+  const topN = nodes.length;
+  for (let i = 0; i < bays; i++) {
+    nodes.push({x: (i+0.5)*dx, y: h, z: 0, support: null});
+  }
+  for (let i = 0; i < bays; i++) {
+    members.push([i, i+1]);
+  }
+  for (let i = 0; i < bays-1; i++) {
+    members.push([topN+i, topN+i+1]);
+  }
+  for (let i = 0; i < bays; i++) {
+    members.push([i, topN+i]);
+    members.push([i+1, topN+i]);
+  }
+  return {nodes, members};
+}
+
+function generateKTruss(span, h, bays) {
+  if (bays % 2 !== 0) bays++;
+  const nodes = [], members = [];
+  const dx = span / bays;
+  for (let i = 0; i <= bays; i++) {
+    nodes.push({x: i*dx, y: 0, z: 0, support: i===0 ? 'pin' : i===bays ? 'roller' : null});
+    nodes.push({x: i*dx, y: h, z: 0, support: null});
+  }
+  // Mid-height nodes
+  const midN = nodes.length;
+  for (let i = 0; i < bays; i++) {
+    nodes.push({x: (i+0.5)*dx, y: h/2, z: 0, support: null});
+  }
+  for (let i = 0; i < bays; i++) {
+    members.push([i*2, (i+1)*2]);
+    members.push([i*2+1, (i+1)*2+1]);
+    members.push([midN+i, i*2+1]);
+    members.push([midN+i, (i+1)*2+1]);
+    members.push([midN+i, i*2]);
+    members.push([midN+i, (i+1)*2]);
+  }
+  return {nodes, members};
+}
+
+function generateSpace(span, h, bays, depth) {
+  const nodes = [], members = [];
+  const dx = span / bays;
+  const rows = 3;
+  const dz = depth / (rows - 1);
+  // Create grid of top and bottom chords
+  for (let j = 0; j < rows; j++) {
+    for (let i = 0; i <= bays; i++) {
+      nodes.push({x: i*dx, y: 0, z: j*dz, support: (i===0||i===bays) && (j===0||j===rows-1) ? 'pin' : null});
+      nodes.push({x: i*dx, y: h, z: j*dz, support: null});
+    }
+  }
+  const stride = (bays+1)*2;
+  for (let j = 0; j < rows; j++) {
+    for (let i = 0; i < bays; i++) {
+      const b = j*stride + i*2;
+      members.push([b, b+2]);
+      members.push([b+1, b+3]);
+    }
+    for (let i = 0; i <= bays; i++) {
+      members.push([j*stride+i*2, j*stride+i*2+1]);
+    }
+    for (let i = 0; i < bays; i++) {
+      const mid = Math.floor(bays/2);
+      const b = j*stride + i*2;
+      if (i < mid) members.push([b+1, b+2]);
+      else members.push([b, b+3]);
+    }
+  }
+  // Cross members between rows
+  for (let j = 0; j < rows-1; j++) {
+    for (let i = 0; i <= bays; i++) {
+      members.push([j*stride+i*2, (j+1)*stride+i*2]);
+      members.push([j*stride+i*2+1, (j+1)*stride+i*2+1]);
+    }
+    for (let i = 0; i < bays; i++) {
+      members.push([j*stride+i*2, (j+1)*stride+(i+1)*2]);
+    }
+  }
+  return {nodes, members};
+}
+
+function generateDome(bays) {
+  const nodes = [], members = [];
+  const R = 8;
+  const rings = Math.max(3, Math.floor(bays/2));
+  // Apex
+  nodes.push({x:0, y:R, z:0, support: null});
+  const divs = [6, 10, 14, 18].slice(0, rings);
+  let ringStart = [1];
+  for (let r = 0; r < rings; r++) {
+    const n = divs[r] || divs[divs.length-1];
+    const phi = Math.PI/2 - (r+1)/(rings+0.5)*Math.PI/2;
+    for (let i = 0; i < n; i++) {
+      const theta = (2*Math.PI*i)/n;
+      const x = R*Math.cos(phi)*Math.cos(theta);
+      const y = R*Math.sin(phi);
+      const z = R*Math.cos(phi)*Math.sin(theta);
+      nodes.push({x, y: Math.max(0, y), z, support: r===rings-1 ? 'pin' : null});
+    }
+    ringStart.push(nodes.length - n);
+  }
+  // Members
+  // Apex to first ring
+  for (let i = 0; i < divs[0]; i++) {
+    members.push([0, 1+i]);
+  }
+  for (let r = 0; r < rings-1; r++) {
+    const n1 = divs[r], n2 = divs[r+1];
+    const s1 = ringStart[r+1], s2 = ringStart[r+2];
+    // Ring members
+    for (let i = 0; i < n1; i++) members.push([s1+i, s1+(i+1)%n1]);
+    // Radial
+    for (let i = 0; i < n1; i++) {
+      const j = Math.round(i * n2/n1) % n2;
+      members.push([s1+i, s2+j]);
+    }
+    for (let i = 0; i < n2; i++) {
+      const j = Math.round(i * n1/n2) % n1;
+      members.push([s2+i, s1+j]);
+    }
+  }
+  // Last ring
+  const lr = rings-1;
+  const sLR = ringStart[lr+1], nLR = divs[lr];
+  for (let i = 0; i < nLR; i++) members.push([sLR+i, sLR+(i+1)%nLR]);
+  return {nodes, members};
+}
+
+// ========== SIMPLE FORCE APPROXIMATION ==========
+function approximateForces(nodes, members, loadVal, loadPos, udlVal) {
+  const forces = [];
+  const span = Math.max(...nodes.map(n => n.x));
+  const h = Math.max(...nodes.map(n => n.y));
+  const loadX = (loadPos/100) * span;
+  const totalLoad = loadVal + udlVal * span;
+  const midMoment = totalLoad * span / 8;
+
+  for (let i = 0; i < members.length; i++) {
+    const [a, b] = members[i];
+    const na = nodes[a], nb = nodes[b];
+    const dx = nb.x - na.x, dy = nb.y - na.y, dz = (nb.z||0)-(na.z||0);
+    const L = Math.sqrt(dx*dx+dy*dy+dz*dz);
+    if (L < 0.001) { forces.push(0); continue; }
+
+    const midX = (na.x + nb.x) / 2;
+    const midY = (na.y + nb.y) / 2;
+    const angle = Math.atan2(dy, dx);
+    const isChord = Math.abs(dy) < 0.001 && Math.abs(dz) < 0.001;
+    const isTop = midY > h * 0.5;
+    const isBot = midY < h * 0.1;
+    const isDiag = !isChord;
+
+    let F = 0;
+    if (isBot) {
+      F = midMoment / Math.max(h, 0.01) * (1 - Math.abs(midX - span/2)/(span*0.6)) * 0.9;
+    } else if (isTop) {
+      F = -midMoment / Math.max(h, 0.01) * (1 - Math.abs(midX - span/2)/(span*0.6)) * 0.85;
+    } else {
+      const v = (totalLoad / 2) * (1 - 2*midX/span);
+      F = isDiag ? -v / Math.max(Math.sin(Math.abs(angle)) + 0.01, 0.1) * 0.7 : v * 0.3;
+    }
+    forces.push(F + (Math.random()-0.5) * Math.abs(F) * 0.05);
+  }
+  return forces;
+}
+
+// ========== BUILD & RENDER ==========
+function buildTruss() {
+  const type = document.getElementById('truss-type').value;
+  const span = parseFloat(document.getElementById('span').value);
+  const height = parseFloat(document.getElementById('height').value);
+  const bays = parseInt(document.getElementById('bays').value);
+  const depth = parseFloat(document.getElementById('depth').value);
+  const loadVal = parseFloat(document.getElementById('load').value);
+  const loadPos = parseFloat(document.getElementById('loadpos').value);
+  const udlVal = parseFloat(document.getElementById('udl').value);
+  const area = parseFloat(document.getElementById('area').value) * 1e-6; // mm² to m²
+  const mat = MATERIALS[document.getElementById('material').value];
+  const showDeform = document.getElementById('tog-deform').checked;
+
+  let gen;
+  switch(type) {
+    case 'pratt': gen = generatePratt(span, height, bays); break;
+    case 'howe': gen = generateHowe(span, height, bays); break;
+    case 'warren': gen = generateWarren(span, height, bays); break;
+    case 'k-truss': gen = generateKTruss(span, height, bays); break;
+    case 'space': gen = generateSpace(span, height, bays, depth); break;
+    case 'dome': gen = generateDome(bays); break;
+    default: gen = generatePratt(span, height, bays);
+  }
+  trussNodes = gen.nodes;
+  trussMembers = gen.members;
+  memberForces = approximateForces(trussNodes, trussMembers, loadVal, loadPos, udlVal);
+
+  renderTruss(showDeform, area, mat, loadVal, loadPos, span);
+  updateResults(area, mat, span, height);
+  updateStats();
+}
+
+const COLOR_TENSION = new THREE.Color(0x39ff14);
+const COLOR_COMP = new THREE.Color(0xff6b35);
+const COLOR_ZERO = new THREE.Color(0x1e4060);
+const COLOR_CHORD = new THREE.Color(0x00e5ff);
+const COLOR_SUPPORT = new THREE.Color(0xffd700);
+const COLOR_NODE = new THREE.Color(0x4aaeff);
+
+function renderTruss(showDeform, area, mat, loadVal, loadPos, span) {
+  if (trussGroup) { scene.remove(trussGroup); trussGroup.traverse(o => { if(o.geometry) o.geometry.dispose(); if(o.material) o.material.dispose(); }); }
+  trussGroup = new THREE.Group();
+  scene.add(trussGroup);
+
+  // Center
+  const cx = (Math.max(...trussNodes.map(n=>n.x)) + Math.min(...trussNodes.map(n=>n.x))) / 2;
+  const cz = (Math.max(...trussNodes.map(n=>(n.z||0))) + Math.min(...trussNodes.map(n=>(n.z||0)))) / 2;
+  const cy = 0;
+
+  const maxForce = Math.max(...memberForces.map(Math.abs), 0.001);
+  const showForces = document.getElementById('tog-forces').checked;
+  const showNodes = document.getElementById('tog-nodes').checked;
+  const showLabels = document.getElementById('tog-labels').checked;
+
+  // Deformation scale
+  const deformScale = showDeform ? 2.0 : 0;
+
+  // Members
+  trussMembers.forEach((m, idx) => {
+    const [a, b] = m;
+    const na = trussNodes[a], nb = trussNodes[b];
+    const F = memberForces[idx];
+    const ratio = F / maxForce;
+
+    let color;
+    if (showForces) {
+      if (Math.abs(ratio) < 0.05) color = COLOR_ZERO;
+      else if (F > 0) color = new THREE.Color().lerpColors(COLOR_ZERO, COLOR_TENSION, ratio);
+      else color = new THREE.Color().lerpColors(COLOR_ZERO, COLOR_COMP, -ratio);
+    } else {
+      color = COLOR_CHORD;
+    }
+
+    const defA = showDeform ? deformY(na, a, loadVal, loadPos, span) : 0;
+    const defB = showDeform ? deformY(nb, b, loadVal, loadPos, span) : 0;
+
+    const p1 = new THREE.Vector3(na.x - cx, na.y + defA, (na.z||0) - cz);
+    const p2 = new THREE.Vector3(nb.x - cx, nb.y + defB, (nb.z||0) - cz);
+
+    const dir = new THREE.Vector3().subVectors(p2, p1);
+    const len = dir.length();
+    if (len < 0.001) return;
+
+    const thickness = Math.max(0.04, 0.04 + Math.abs(ratio) * 0.1);
+    const geo = new THREE.CylinderGeometry(thickness, thickness, len, 6);
+    const mat3 = new THREE.MeshPhongMaterial({ color, emissive: color, emissiveIntensity: 0.2, shininess: 80 });
+    const mesh = new THREE.Mesh(geo, mat3);
+    mesh.position.copy(p1).lerp(p2, 0.5);
+    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), dir.normalize());
+    mesh.castShadow = true;
+    trussGroup.add(mesh);
+
+    // Force arrow glow
+    if (showForces && Math.abs(ratio) > 0.1) {
+      const lineMat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.4 });
+      const lineGeo = new THREE.BufferGeometry().setFromPoints([p1, p2]);
+      const line = new THREE.Line(lineGeo, lineMat);
+      trussGroup.add(line);
+    }
+  });
+
+  // Nodes
+  if (showNodes) {
+    trussNodes.forEach((n, idx) => {
+      const defY = showDeform ? deformY(n, idx, loadVal, loadPos, span) : 0;
+      const pos = new THREE.Vector3(n.x - cx, n.y + defY, (n.z||0) - cz);
+      let color = COLOR_NODE;
+      let size = 0.18;
+      if (n.support === 'pin') { color = COLOR_SUPPORT; size = 0.22; }
+      else if (n.support === 'roller') { color = new THREE.Color(0xffa040); size = 0.22; }
+      const geo = new THREE.SphereGeometry(size, 10, 10);
+      const mat3 = new THREE.MeshPhongMaterial({ color, emissive: color, emissiveIntensity: 0.5 });
+      const mesh = new THREE.Mesh(geo, mat3);
+      mesh.position.copy(pos);
+      mesh.castShadow = true;
+      trussGroup.add(mesh);
+
+      // Support symbols
+      if (n.support) {
+        const supGeo = n.support === 'pin'
+          ? new THREE.ConeGeometry(0.3, 0.5, 3)
+          : new THREE.CylinderGeometry(0.3, 0.3, 0.1, 16);
+        const supMat = new THREE.MeshPhongMaterial({ color: COLOR_SUPPORT, emissive: COLOR_SUPPORT, emissiveIntensity: 0.3 });
+        const sup = new THREE.Mesh(supGeo, supMat);
+        sup.position.set(pos.x, pos.y - 0.4, pos.z);
+        if (n.support === 'pin') sup.rotation.z = Math.PI;
+        trussGroup.add(sup);
+      }
+    });
+  }
+
+  // Load arrows
+  const loadNode = findLoadNode(loadPos, span, cx);
+  if (loadNode !== null) {
+    const n = trussNodes[loadNode];
+    const pos = new THREE.Vector3(n.x - cx, n.y, (n.z||0) - cz);
+    drawArrow(pos, loadVal * 0.01);
+  }
+
+  updateGrid();
+
+  // Adjust camera
+  const maxExtent = Math.max(span, Math.max(...trussNodes.map(n=>n.y)));
+  spherical.radius = maxExtent * 1.6 + 8;
+  updateCamera();
+}
+
+function deformY(node, idx, loadVal, loadPos, span) {
+  if (node.support) return 0;
+  const x = node.x;
+  const a = (loadPos / 100) * span;
+  const L = span;
+  let def = 0;
+  if (x <= a) def = (loadVal * x * (L-a)) / (6 * L) * (L*L - x*x - (L-a)*(L-a)) * 0.001;
+  else def = (loadVal * a * (L-x)) / (6 * L) * (L*L - (L-x)*(L-x) - a*a) * 0.001;
+  return -Math.abs(def) * 0.5;
+}
+
+function findLoadNode(loadPos, span, cx) {
+  const targetX = (loadPos/100) * span;
+  let best = -1, bestDist = Infinity;
+  trussNodes.forEach((n, i) => {
+    if (n.support) return;
+    const d = Math.abs(n.x - targetX);
+    if (d < bestDist) { bestDist = d; best = i; }
+  });
+  return best;
+}
+
+function drawArrow(pos, scale) {
+  const arrowColor = new THREE.Color(0xff4400);
+  const len = Math.max(0.5, Math.min(3, scale * 50));
+  const geo = new THREE.ConeGeometry(0.2, 0.5, 8);
+  const mat = new THREE.MeshPhongMaterial({ color: arrowColor, emissive: arrowColor, emissiveIntensity: 0.5 });
+  const arrow = new THREE.Mesh(geo, mat);
+  arrow.position.set(pos.x, pos.y + 1 + len, pos.z);
+  trussGroup.add(arrow);
+  const shaftGeo = new THREE.CylinderGeometry(0.07, 0.07, len, 6);
+  const shaft = new THREE.Mesh(shaftGeo, mat);
+  shaft.position.set(pos.x, pos.y + 0.5 + len/2, pos.z);
+  trussGroup.add(shaft);
+}
+
+// ========== RESULTS ==========
+function updateResults(area, mat, span, height) {
+  const tbody = document.getElementById('member-tbody');
+  tbody.innerHTML = '';
+  let maxT = 0, maxC = 0;
+  const maxForce = Math.max(...memberForces.map(Math.abs), 0.001);
+
+  memberForces.forEach((F, i) => {
+    const [a, b] = trussMembers[i];
+    const na = trussNodes[a], nb = trussNodes[b];
+    const dx = nb.x-na.x, dy = nb.y-na.y, dz=(nb.z||0)-(na.z||0);
+    const L = Math.sqrt(dx*dx+dy*dy+dz*dz);
+    const stress = F * 1000 / (area * 1e6); // MPa
+    if (F > maxT) maxT = F;
+    if (F < maxC) maxC = F;
+    if (i >= 20) return;
+    const tr = document.createElement('tr');
+    const type = Math.abs(F) < 1 ? 'Zero' : F > 0 ? 'Tension' : 'Comp.';
+    const cls = Math.abs(F) < 1 ? 'td-zero' : F > 0 ? 'td-tension' : 'td-compression';
+    tr.innerHTML = `<td>${i+1}</td><td>${a}–${b}</td><td class="${cls}">${F.toFixed(1)} kN</td><td class="${cls}">${type}</td><td>${stress.toFixed(1)} MPa</td>`;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('max-tension').innerHTML = maxT.toFixed(1) + '<span class="analysis-card-unit">kN</span>';
+  document.getElementById('max-comp').innerHTML = Math.abs(maxC).toFixed(1) + '<span class="analysis-card-unit">kN</span>';
+
+  // Deflection estimate
+  const totalLoad = parseFloat(document.getElementById('load').value);
+  const E = mat.E;
+  const I = area * height * height / 4;
+  const defl = (totalLoad*1000 * (span*span*span)) / (48 * E * I) * 1000;
+  document.getElementById('max-defl').innerHTML = defl.toFixed(2) + '<span class="analysis-card-unit">mm</span>';
+
+  // Weight
+  let totalLen = 0;
+  trussMembers.forEach(([a, b]) => {
+    const na=trussNodes[a], nb=trussNodes[b];
+    const dx=nb.x-na.x, dy=nb.y-na.y, dz=(nb.z||0)-(na.z||0);
+    totalLen += Math.sqrt(dx*dx+dy*dy+dz*dz);
+  });
+  const weight = totalLen * area * mat.density;
+  document.getElementById('total-weight').innerHTML = weight.toFixed(0) + '<span class="analysis-card-unit">kg</span>';
+
+  // Force diagram
+  const diagram = document.getElementById('force-diagram');
+  diagram.innerHTML = '';
+  const display = memberForces.slice(0, Math.min(20, memberForces.length));
+  const dmax = Math.max(...display.map(Math.abs), 1);
+  display.forEach((F, i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'force-bar-wrap';
+    const bar = document.createElement('div');
+    bar.className = 'force-bar';
+    const h = Math.max(4, Math.abs(F)/dmax * 110);
+    bar.style.height = h + 'px';
+    bar.style.background = F > 0 ? 'var(--accent3)' : F < 0 ? 'var(--accent2)' : 'var(--text-dim)';
+    if (Math.abs(F) > dmax*0.8) bar.style.boxShadow = F>0 ? 'var(--glow2)' : '0 0 8px rgba(255,107,53,0.5)';
+    const lbl = document.createElement('div');
+    lbl.className = 'force-bar-label';
+    lbl.textContent = i+1;
+    wrap.appendChild(bar);
+    wrap.appendChild(lbl);
+    diagram.appendChild(wrap);
+  });
+}
+
+function updateStats() {
+  const n = trussNodes.length;
+  const m = trussMembers.length;
+  const r = trussNodes.filter(nd => nd.support).length * 1.5 | 0;
+  const dof = 2*n - m - r;
+  document.getElementById('stat-nodes').textContent = n;
+  document.getElementById('stat-members').textContent = m;
+  document.getElementById('stat-dof').textContent = 2*n;
+  const det = document.getElementById('stat-det');
+  if (Math.abs(dof) <= 1) { det.textContent = 'DET'; det.style.color = 'var(--accent3)'; }
+  else if (dof < 0) { det.textContent = 'INDET'; det.style.color = 'var(--accent)'; }
+  else { det.textContent = 'MECH'; det.style.color = 'var(--accent2)'; }
+}
+
+function resetView() {
+  spherical = {theta: -Math.PI/4, phi: Math.PI/4, radius: 20};
+  panOffset.set(0,0,0);
+  updateCamera();
+}
+
+function exportData() {
+  let csv = 'Member,NodeA,NodeB,Force(kN),Type\n';
+  memberForces.forEach((F, i) => {
+    const type = Math.abs(F) < 1 ? 'Zero' : F>0 ? 'Tension' : 'Compression';
+    csv += `${i+1},${trussMembers[i][0]},${trussMembers[i][1]},${F.toFixed(3)},${type}\n`;
+  });
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'truss_results.csv';
+  a.click();
+}
+
+// ========== INPUT HANDLERS ==========
+function setupRangeInputs() {
+  const inputs = [
+    ['span','val-span',''],
+    ['height','val-height',''],
+    ['bays','val-bays',''],
+    ['depth','val-depth',''],
+    ['area','val-area',''],
+    ['load','val-load',''],
+    ['loadpos','val-loadpos',''],
+    ['udl','val-udl',''],
+  ];
+  inputs.forEach(([id, label]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', () => {
+      document.getElementById(label).textContent = el.value;
+      updateRangeGradient(el);
+      buildTruss();
+    });
+    updateRangeGradient(el);
+  });
+
+  ['truss-type','material'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', buildTruss);
+  });
+  ['tog-forces','tog-nodes','tog-labels','tog-deform','tog-grid','tog-shadow'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', buildTruss);
+  });
+}
+
+function updateRangeGradient(el) {
+  const min = parseFloat(el.min), max = parseFloat(el.max), val = parseFloat(el.value);
+  const pct = ((val - min) / (max - min)) * 100;
+  el.style.setProperty('--pct', pct + '%');
+}
+
+// ========== ANIMATE ==========
+function animate() {
+  requestAnimationFrame(animate);
+  const cam = isPerspective ? camera : orthoCamera;
+  renderer.render(scene, cam);
+}
+
+function onResize() {
+  renderer.setSize(W(), H());
+  camera.aspect = W()/H();
+  camera.updateProjectionMatrix();
+  const aspect = W()/H();
+  const d = spherical.radius * 0.5;
+  orthoCamera.left = -d*aspect; orthoCamera.right = d*aspect;
+  orthoCamera.top = d; orthoCamera.bottom = -d;
+  orthoCamera.updateProjectionMatrix();
+}
+
+window.addEventListener('resize', onResize);
+onResize();
+setupRangeInputs();
+updateCamera();
+buildTruss();
+animate();
+</script>
+</body>
+</html>
