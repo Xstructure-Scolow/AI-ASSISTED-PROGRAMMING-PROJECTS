@@ -9,7 +9,7 @@
 ==============================================================================
 """
 
-import tkinter as t
+import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext, filedialog
 import threading
 import traceback
